@@ -1,23 +1,53 @@
-name: Build EXE
+name: Build Windows, Linux, and macOS
+
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   workflow_dispatch:
+
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: win
+            artifact_name: Browser-Windows
+            artifact_path: dist/*.exe
+
+          - os: ubuntu-latest
+            platform: linux
+            artifact_name: Browser-Linux
+            artifact_path: |
+              dist/*.AppImage
+              dist/*.deb
+
+          - os: macos-latest
+            platform: mac
+            artifact_name: Browser-macOS
+            artifact_path: dist/*.dmg
+
+    runs-on: ${{ matrix.os }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "24"
+
       - name: Install dependencies
         run: npm install
-      - name: Build portable EXE
-        run: npm run dist -- --win --publish never
-      - name: Upload EXE
+
+      - name: Build application
+        run: npm run dist -- --${{ matrix.platform }} --publish never
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Browser-EXE
-          path: dist/*.exe
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
